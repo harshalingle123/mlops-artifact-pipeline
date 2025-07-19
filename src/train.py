@@ -1,35 +1,49 @@
-name: Train Model
+import json
+import pickle
+from sklearn.datasets import load_digits
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 
-on:
-  push:
-    branches:
-      - classification_branch
+def load_config(config_path="config/config.json"):
+    with open(config_path, 'r') as f:
+        return json.load(f)
 
-jobs:
-  train:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+def train_model():
+    # Load dataset
+    digits = load_digits()
+    X, y = digits.data, digits.target
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.9'
+    # Scale features
+    scaler = StandardScaler()
+    X = scaler.fit_transform(X)
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    # Split data
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-      - name: Run training script
-        run: python src/train.py
+    # Load hyperparameters
+    config = load_config()
+    C = config['C']
+    solver = config['solver']
+    max_iter = config['max_iter']
 
-      - name: Upload model and scaler artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: model-artifact
-          path: |
-            model_train.pkl
-            scaler.pkl
-          retention-days: 5
+    # Train model
+    model = LogisticRegression(C=C, solver=solver, max_iter=max_iter, multi_class='multinomial')
+    model.fit(X_train, y_train)
+
+    # Evaluate model
+    train_accuracy = model.score(X_train, y_train)
+    test_accuracy = model.score(X_test, y_test)
+    print(f"Training Accuracy: {train_accuracy:.4f}")
+    print(f"Test Accuracy: {test_accuracy:.4f}")
+
+    # Save model and scaler
+    with open('model_train.pkl', 'wb') as f:
+        pickle.dump(model, f)
+    with open('scaler.pkl', 'wb') as f:
+        pickle.dump(scaler, f)
+
+    return model
+
+if __name__ == "__main__":
+    train_model()

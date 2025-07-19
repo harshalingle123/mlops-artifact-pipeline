@@ -25,9 +25,11 @@ jobs:
       - name: Run training script
         run: python src/train.py
 
-      - name: Upload model artifact
+      - name: Upload model and scaler artifacts
         uses: actions/upload-artifact@v4
         with:
           name: model-artifact
-          path: model_train.pkl
+          path: |
+            model_train.pkl
+            scaler.pkl
           retention-days: 5
