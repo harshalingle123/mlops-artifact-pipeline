@@ -1,0 +1,81 @@
+name: Inference Pipeline
+
+on:
+  push:
+    branches:
+      - inference_branch
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run tests
+        run: pytest tests/test_train.py -v
+
+  train:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run training script
+        run: python src/train.py
+
+      - name: Upload model and scaler artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-artifact
+          path: |
+            model_train.pkl
+            scaler.pkl
+          retention-days: 5
+
+  inference:
+    needs: train
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download model and scaler artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: model-artifact
+          path: .
+
+      - name: Run inference script
+        run: python src/inference.py
