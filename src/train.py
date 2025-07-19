@@ -1,40 +1,35 @@
-import json
-import pickle
-from sklearn.datasets import load_digits
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
+name: Train Model
 
-def load_config(config_path="config/config.json"):
-    with open(config_path, 'r') as f:
-        return json.load(f)
+on:
+  push:
+    branches:
+      - classification_branch
 
-def train_model():
-    # Load dataset
-    digits = load_digits()
-    X, y = digits.data, digits.target
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # Load hyperparameters
-    config = load_config()
-    C = config['C']
-    solver = config['solver']
-    max_iter = config['max_iter']
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
 
-    # Train model
-    model = LogisticRegression(C=C, solver=solver, max_iter=max_iter, multi_class='auto')
-    model.fit(X_train, y_train)
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-    # Evaluate model
-    train_accuracy = model.score(X_train, y_train)
-    test_accuracy = model.score(X_test, y_test)
-    print(f"Training Accuracy: {train_accuracy:.4f}")
-    print(f"Test Accuracy: {test_accuracy:.4f}")
+      - name: Run training script
+        run: python src/train.py
 
-    # Save model
-    with open('model_train.pkl', 'wb') as f:
-        pickle.dump(model, f)
-
-    return model
-
-if __name__ == "__main__":
-    train_model()
+      - name: Upload model and scaler artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: model-artifact
+          path: |
+            model_train.pkl
+            scaler.pkl
+          retention-days: 5
